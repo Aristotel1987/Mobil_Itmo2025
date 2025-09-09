@@ -1,0 +1,39 @@
+@startuml
+
+actor Пользователь as user
+participant Модуль интерфейса as app
+participant Модуль сбора данных as collector
+participant Модуль управления приложением as mng
+participant База Данных Температур as db
+participant Модуль расчета температур as calc 
+participant Датчик температуры as tsens
+participant Датчик влажности as hsens
+participant API погоды за окном as wapi
+participant API альтернативной погоды as wapi_alt  // Второй API для погоды
+
+collector -> collector: Модуль сбора данных по таймеру активирует процедуру сбора данных
+collector -> tsens: Запрос данных о температуре в помещении
+collector -> wapi: Запрос данных о температуре за окном
+collector -> hsens: Запрос данных о влажности в помещении
+tsens -> collector: Передача данных о температуре в помещении
+hsens -> collector: Передача данных о влажности в помещении
+wapi -> collector: Передача данных о температуре за окном
+
+alt Погода не получена от wapi
+    collector -> wapi_alt: Повторный запрос температуры за окном
+    alt Погода не получена от wapi_alt
+        collector -> mng: Сообщение о невозможности получить данные о погоде
+        mng -> app: Сообщение о неисправности обоих API погоды
+        app -> user: Пуш-уведомление о невозможности получить данные о погоде
+    end
+end
+
+alt Ошибка внутренних датчиков
+    collector -> mng: Сообщение об ошибке датчика
+    mng -> app: Сообщение о неисправности датчика
+    app -> user: Пуш-уведомление о неисправности датчика
+end
+
+collector -> db: Запись данных о температуре и влажности в БД
+
+@enduml
